@@ -1,0 +1,6 @@
+{
+  "db_path": "localhost/xbrldb",
+  "db_user": "dbuser",
+  "db_pass": "somedbpass",
+  "drop_tables": false
+}
