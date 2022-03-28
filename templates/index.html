@@ -16,7 +16,17 @@
         enctype="multipart/form-data"
         >
         <h2>Fill in data</h2>
-        <input type="file" name="file" />
+        <div>
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              {% for message in messages %}
+                <pre>{{ message }}</pre>
+              {% endfor %}
+            {% endif %}
+          {% endwith %}
+        </div>
+        <input type="file" name="file" directory webkitdirectory />
+        <input type="text" name="entry_file" placeholder="Path to entry file" />
         <input type="text" name="db_path" placeholder="DB path" />
         <input type="text" name="db_user" placeholder="DB user" />
         <input type="text" name="db_pass" placeholder="DB password"/>
