@@ -18,77 +18,84 @@ cache: HttpCache = HttpCache('./cache')
 cache.set_headers({'From': 'your.name@company.com', 'User-Agent': 'Tool/Version (Website)'})
 xbrlParser = XbrlParser(cache)
 
+def parseFile(filename):
+    print('Parsing file : ' + filename + ' ...');
+    inst: XbrlInstance = xbrlParser.parse_instance_locally(filename)
+    print('Parsed successfully : ' + str(inst))
+    return inst
+
+def saveToDB(inst, filename):
+    # Connect to db
+    print('Connecting to Oracle Database at : ' + config['db_path'])
+    connection = cx_Oracle.connect(
+        user=config['db_user'],
+        password=config['db_pass'],
+        dsn=config['db_path'])
+    print("Successfully connected to Oracle Database")
+    # The db cursor
+    cursor = connection.cursor()
+    # Drop tables if config has drop_tables flag
+    if config['drop_tables']:
+        cursor.execute("""
+          begin
+            execute immediate 'drop table xbrlfile';
+            exception when others then if sqlcode <> -942 then raise; end if;
+          end;""")
+        cursor.execute("""
+          begin
+            execute immediate 'drop table xbrlfacts';
+            exception when others then if sqlcode <> -942 then raise; end if;
+          end;""")
+    # Create tables if not existent
+    cursor.execute("""
+      begin
+      execute immediate '
+        create table xbrlfile (
+          id number generated always as identity,
+          filename varchar2(4000),
+          creation_ts timestamp with time zone default current_timestamp,
+          primary key (id))';
+      exception when others then
+        if SQLCODE = -955 then null; else raise; end if;
+      end;
+    """)
+    cursor.execute("""
+      begin
+      execute immediate '
+        create table xbrlfacts (
+          id number generated always as identity,
+          fileid number,
+          name varchar2(4000),
+          value varchar2(4000),
+          creation_ts timestamp with time zone default current_timestamp,
+          primary key (id))';
+      exception when others then
+        if SQLCODE = -955 then null; else raise; end if;
+      end;
+    """)
+    # insert file to db
+    cursor.execute("insert into xbrlfile (filename) values(:1)", [filename])
+    # get file from db (to get id)
+    file = cursor.execute("SELECT * from xbrlfile WHERE filename = :filename", filename=filename).fetchOne()
+    # init facts for db insertion
+    facts = []
+    # extract facts and save to list
+    for i in range(len(inst.facts)):
+        fact = inst.facts[i]
+        facts[i] = [file.id, fact.concept.name, fact.value]
+    # insert facts to db
+    cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
 
 if len(sys.argv) < 2:
     print('ERROR: No file supplied');
     exit(1);
+elif sys.argv[1] == '-h':
+    print('xbrl2oracle')
+else:
+    print('[File mode]\n')
+    inst = parseFile(sys.argv[1])
+    saveToDB(inst, sys.argv[1])
 
-print('Parsing file : ' + sys.argv[1] + ' ...');
-inst: XbrlInstance = xbrlParser.parse_instance_locally(sys.argv[1])
-print('Parsed successfully : ' + inst);
 
-# Connect to db
-print('Connecting to Oracle Database at : ' + config['db_path'])
-connection = cx_Oracle.connect(
-    user=config['db_user'],
-    password=config['db_pass'],
-    dsn=config['db_path'])
-print("Successfully connected to Oracle Database")
-
-cursor = connection.cursor()
-
-# Drop tables if config has drop_tables flag
-if config['drop_tables']:
-    cursor.execute("""
-        begin
-          execute immediate 'drop table xbrlfile';
-          exception when others then if sqlcode <> -942 then raise; end if;
-        end;""")
-    cursor.execute("""
-        begin
-          execute immediate 'drop table xbrlfacts';
-          exception when others then if sqlcode <> -942 then raise; end if;
-        end;""")
-
-# Create tables if not existent
-cursor.execute("""
-    begin
-    execute immediate '
-      create table xbrlfile (
-        id number generated always as identity,
-        filename varchar2(4000),
-        creation_ts timestamp with time zone default current_timestamp,
-        primary key (id))';
-    exception when others then
-      if SQLCODE = -955 then null; else raise; end if;
-    end;
-""")
-cursor.execute("""
-    begin
-    execute immediate '
-      create table xbrlfacts (
-        id number generated always as identity,
-        fileid number,
-        name varchar2(4000),
-        value varchar2(4000),
-        creation_ts timestamp with time zone default current_timestamp,
-        primary key (id))';
-    exception when others then
-      if SQLCODE = -955 then null; else raise; end if;
-    end;
-""")
-
-cursor.execute("insert into xbrlfile (filename) values(:1)", [sys.argv[1]])
-
-file = cursor.execute("SELECT * from xbrlfile WHERE filename = :filename", filename=sys.argv[1]).fetchOne()
-
-facts = []
-# now extracting some selected facts
-for i in range(len(inst.facts)):
-    fact = inst.facts[i]
-    facts[i] = [file.id, fact.concept.name, fact.value]
-
-cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
-
-# Close config file
+# Close config file upon exiting
 configfile.close()
