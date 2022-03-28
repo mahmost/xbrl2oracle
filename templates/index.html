@@ -1,15 +1,27 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>XBRL to Oracle Database</title>
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+  </head>
   <body>
-    <form
-      action="http://localhost:5000/xbrl2oracle"
-      method="POST"
-      enctype="multipart/form-data"
-    >
-      <input type="file" name="file" />
-      <input type="text" name="db_path" placeholder="DB path" />
-      <input type="text" name="db_user" placeholder="DB user" />
-      <input type="text" name="db_pass" placeholder="DB password"/>
-      <input type="submit"/>
-    </form>   
+    <header>
+      <h1>XBRL to Oracle Database</h1>
+    </header>
+    <section>
+      <form
+        action="http://localhost:5000/xbrl2oracle"
+        method="POST"
+        enctype="multipart/form-data"
+        >
+        <h2>Fill in data</h2>
+        <input type="file" name="file" />
+        <input type="text" name="db_path" placeholder="DB path" />
+        <input type="text" name="db_user" placeholder="DB user" />
+        <input type="text" name="db_pass" placeholder="DB password"/>
+        <input type="submit" value="Submit" />
+      </form>
+    </section> 
   </body>
 </html>
