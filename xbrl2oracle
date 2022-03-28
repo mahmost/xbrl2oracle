@@ -3,9 +3,16 @@
 import sys
 import logging
 import json
+import webbrowser
 import cx_Oracle
+from threading import Timer
+from flask import Flask, render_template, request, flash, url_for
+from werkzeug.utils import secure_filename
 from xbrl.cache import HttpCache
 from xbrl.instance import XbrlParser, XbrlInstance
+
+UPLOAD_FOLDER = './uploads'
+ALLOWED_EXTENSIONS = {'xml', 'xbrl'}
 
 print('Reading config file')
 configfile = open('config.json')
@@ -86,9 +93,44 @@ def saveToDB(inst, filename):
     # insert facts to db
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
 
+def run_server():
+    app = Flask(__name__)
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    # web ui route
+    @app.route('/')
+    def index():
+        return render_template('./index.html')
+    # default endpoint
+    @app.route('/xbrl2oracle', methods = ['POST'])
+    def xbrl2oracle():
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # If the user does not select a file, the browser submits an
+        # empty file without a filename.
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            local_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(local_filename)
+            inst = parseFile(local_filename)
+            saveToDB(inst, local_filename)
+            return 'Inserted'
+    # run server
+    if __name__ == '__main__':
+        app.run(debug=True, host='0.0.0.0')
+
+def open_browser():
+    webbrowser.open('http://localhost:5000/', new=0, autoraise=True)
+
 if len(sys.argv) < 2:
-    print('ERROR: No file supplied');
-    exit(1);
+    print('[Server mode]\n')
+    Timer(1, open_browser).start();
+    run_server()
 elif sys.argv[1] == '-h':
     print('xbrl2oracle')
 else:

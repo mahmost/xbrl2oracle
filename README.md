@@ -17,6 +17,19 @@ make
 ./xbrl2oracle /path/to/file.xml
 ```
 
+### Server Mode
+
+When run without arguments, the script runs in server mode, which serves a default web ui at `http://localhost:5000/`
+
+The server supports the following REST endpoint:
+
+- **POST** `/xbrl2oracle` - parameters :
+  - `file`
+  - `db_path`
+  - `db_user`
+  - `db_pass`
+
+
 ### Sample
 
 We used a sample from [xbrlsite.com](http://www.xbrlsite.com/US-GAAP/BasicExample/2010-09-30/Landing.html), which is downloaded to the ./sample directory by the `make` command and can be run using `make run-sample` which is equivalent to `./xbrl2oracle ./sample/abc-20101231.xml`
