@@ -121,6 +121,13 @@ def run_server():
             flash('No files to upload')
             return redirect('/')
 
+        if (request.form['db_path'] != ''):
+            config['db_path'] = request.form['db_path']
+        if (request.form['db_user'] != ''):
+            config['db_user'] = request.form['db_user']
+        if (request.form['db_pass'] != ''):
+            config['db_pass'] = request.form['db_pass']
+
         for file in files:
             # If the user does not select a file, the browser submits an
             # empty file without a filename.
