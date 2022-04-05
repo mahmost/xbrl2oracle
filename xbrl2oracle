@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from xbrl.cache import HttpCache
 from xbrl.instance import XbrlParser, XbrlInstance
 
-UPLOAD_FOLDER = './uploads'
+UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'html', 'xml', 'xbrl', 'xsd', 'xsl'}
 
 print('Reading config file')
@@ -128,6 +128,8 @@ def run_server():
         if (request.form['db_pass'] != ''):
             config['db_pass'] = request.form['db_pass']
 
+        print('current working directory : '+ os.getcwd())
+
         for file in files:
             # If the user does not select a file, the browser submits an
             # empty file without a filename.
@@ -139,9 +141,11 @@ def run_server():
                 path = os.path.dirname(file.filename)
                 local_path = os.path.join(app.config['UPLOAD_FOLDER'], path)
                 if not os.path.exists(local_path):
+                    print('creating directory: ' + local_path)
                     os.mkdir(local_path)
                 filename = os.path.join(path, secure_filename(os.path.basename(file.filename)))
                 local_filename = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                print('saving file: ' + local_filename)
                 file.save(local_filename)
 
         # now run script on the selected entry file
