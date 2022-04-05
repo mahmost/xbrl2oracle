@@ -46,7 +46,7 @@ def saveToDB(inst, filename):
     if config['drop_tables']:
         cursor.execute("""
           begin
-            execute immediate 'drop table xbrlfile';
+            execute immediate 'drop table xbrlfiles';
             exception when others then if sqlcode <> -942 then raise; end if;
           end;""")
         cursor.execute("""
@@ -58,7 +58,7 @@ def saveToDB(inst, filename):
     cursor.execute("""
       begin
       execute immediate '
-        create table xbrlfile (
+        create table xbrlfiles (
           id number generated always as identity,
           filename varchar2(4000),
           creation_ts timestamp with time zone default current_timestamp,
@@ -82,9 +82,9 @@ def saveToDB(inst, filename):
       end;
     """)
     # insert file to db
-    cursor.execute("insert into xbrlfile (filename) values(:1)", [filename])
+    cursor.execute("insert into xbrlfiles (filename) values(:1)", [filename])
     # get file from db (to get id)
-    file = cursor.execute("SELECT * from xbrlfile WHERE filename = :filename", filename=filename).fetchOne()
+    file = cursor.execute("SELECT * from xbrlfiles WHERE filename = :filename", filename=filename).fetchone()
     # init facts for db insertion
     facts = []
     # extract facts and save to list
