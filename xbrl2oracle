@@ -94,6 +94,21 @@ def saveToDB(inst, filename):
     # insert facts to db
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
 
+def read_db():
+    # Connect to db
+    print('Connecting to Oracle Database at : ' + config['db_path'])
+    connection = cx_Oracle.connect(
+        user=config['db_user'],
+        password=config['db_pass'],
+        dsn=config['db_path'])
+    print("Successfully connected to Oracle Database")
+    # The db cursor
+    cursor = connection.cursor()
+
+    facts = cursor.execute("SELECT f.* from l.* xbrlfile FROM xbrlfacts f INNER JOIN xbrlfiles l ON f.fileid = l.id ORDER BY f.id").fetchall()
+    return json.dumps(facts)
+
+
 def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -107,7 +122,7 @@ def run_server():
     @app.route('/')
     def index():
         return render_template('./index.html')
-    # default endpoint
+    # main endpoint
     @app.route('/xbrl2oracle', methods = ['POST'])
     def xbrl2oracle():
         files = request.files.getlist("file")
@@ -153,6 +168,11 @@ def run_server():
         inst = parseFile(entry)
         saveToDB(inst, entry)
         return 'Inserted'
+
+    # list facts endpoint
+    @app.route('/facts', methods= ['GET'])
+    def facts():
+        return read_db()
 
     # run server
     if __name__ == '__main__':

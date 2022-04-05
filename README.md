@@ -4,6 +4,8 @@ Simple example of parsing xbrl document and storing some of its data into an ora
 
 **[WIP] THIS IS A WORK IN PROGRESS**
 
+---
+
 ### Running
 
 Fist you need to edit config.json file to contain db string, user, and password
@@ -17,11 +19,13 @@ make
 ./xbrl2oracle /path/to/file.xml
 ```
 
+---
+
 ### Server Mode
 
 When run without arguments, the script runs in server mode, which serves a default web ui at `http://localhost:5000/`
 
-The server supports the following REST endpoint:
+The server supports the following REST endpoints:
 
 - **POST** `/xbrl2oracle` - parameters :
   - `file`
@@ -29,6 +33,9 @@ The server supports the following REST endpoint:
   - `db_user`
   - `db_pass`
 
+- **GET** `/facts` - no parameters (returns json string of facts in db)
+
+---
 
 ### Sample
 
