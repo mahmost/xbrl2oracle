@@ -153,17 +153,19 @@ def run_server():
                 return redirect('/')
             if file and allowed_file(file.filename):
                 print('uploading   :  ' + file.filename)
-                path = os.path.dirname(file.filename)
+                path = os.path.basename(os.path.dirname(file.filename))
                 print('file path   :  ' + path)
                 local_path = os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'], path)
+                print('local path  :  ' + local_path)
                 if not os.path.exists(local_path):
                     print('creating directory: ' + local_path)
                     os.mkdir(local_path)
-                filename = os.path.join(path, secure_filename(os.path.basename(file.filename)))
+                filename = secure_filename(os.path.basename(file.filename))
                 print('filename    :  ' + filename)
                 local_filename = os.path.join(local_path, filename)
                 print('saving file :  ' + local_filename)
                 file.save(local_filename)
+                print('file saved');
 
         # now run script on the selected entry file
         entry = os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'], request.form.get('entry_file'))
