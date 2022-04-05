@@ -90,7 +90,7 @@ def saveToDB(inst, filename):
     # extract facts and save to list
     for i in range(len(inst.facts)):
         fact = inst.facts[i]
-        facts[i] = [fileid, fact.concept.name, fact.value]
+        facts.append([fileid, fact.concept.name, fact.value])
     # insert facts to db
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
     connection.commit()
