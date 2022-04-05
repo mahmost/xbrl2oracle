@@ -83,14 +83,14 @@ def saveToDB(inst, filename):
       end;
     """)
     # insert file to db
-    cursor.execute("insert into xbrlfiles (filename) values(:1)", [filename])
-    fileid = cursor.lastrowid;
+    fileid = cursor.var(int)
+    cursor.execute("insert into xbrlfiles (filename) values(:filename) returning id into :fileid", filename=filename, fileid=fileid)
     # init facts for db insertion
     facts = []
     # extract facts and save to list
     for i in range(len(inst.facts)):
         fact = inst.facts[i]
-        facts.append([fileid, str(fact.concept.name), str(fact.value)])
+        facts.append([fileid.getvalue()[0], str(fact.concept.name), str(fact.value)])
     # insert facts to db
     print('facts before insert  :   ', facts);
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
