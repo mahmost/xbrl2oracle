@@ -93,6 +93,7 @@ def saveToDB(inst, filename):
         facts[i] = [fileid, fact.concept.name, fact.value]
     # insert facts to db
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
+    connection.commit()
 
 def read_db():
     # Connect to db
