@@ -107,7 +107,7 @@ def read_db():
     # The db cursor
     cursor = connection.cursor()
 
-    facts = cursor.execute("SELECT f.* from l.* xbrlfile FROM xbrlfacts f INNER JOIN xbrlfiles l ON f.fileid = l.id ORDER BY f.id").fetchall()
+    facts = cursor.execute("SELECT f.*, l.* FROM xbrlfacts f INNER JOIN xbrlfiles l ON f.fileid = l.id ORDER BY f.id").fetchall()
     return json.dumps(facts)
 
 
