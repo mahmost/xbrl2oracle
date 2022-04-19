@@ -1,25 +1,41 @@
 #!/bin/python
 
+# for command line arguments parsing
 import sys
+# for paths/directories related things
 import os
+# for removing directory with all contents
 import shutil
+# for logging of xbrl parsing
 import logging
+# for json parsing and writing
 import json
+# for opening the web interface after starting server
 import webbrowser
+# for connecting to the oracle db
 import cx_Oracle
+# for waiting for the server to open before opening browser window
 from threading import Timer
+# for server mode (HTTP server)
 from flask import Flask, render_template, request, redirect, flash, url_for
+# for file uploads (saving file name safely)
 from werkzeug.utils import secure_filename
+# for xbrl parsing cache
 from xbrl.cache import HttpCache
+# the library we use for xbrl parsing itself (https://github.com/manusimidt/py-xbrl)
 from xbrl.instance import XbrlParser, XbrlInstance
 
+# the path to the folder where we put uploaded files
 UPLOAD_FOLDER = 'uploads'
+# the allowed extensions when uploading files
 ALLOWED_EXTENSIONS = {'html', 'xml', 'xbrl', 'xsd', 'xsl'}
 
+# read config file and store the result in the variable named `config`
 print('Reading config file')
 configfile = open('config.json')
 config = json.load(configfile)
 
+# initiate/prepare xbrl parser (as instructed in the library's README : https://github.com/manusimidt/py-xbrl#parse-locally-saved-submissions)
 logging.basicConfig(level=logging.INFO)
 cache: HttpCache = HttpCache('./cache')
 # Replace the dummy header with your information!!
@@ -27,12 +43,18 @@ cache: HttpCache = HttpCache('./cache')
 cache.set_headers({'From': 'your.name@company.com', 'User-Agent': 'Tool/Version (Website)'})
 xbrlParser = XbrlParser(cache)
 
+# define function for parsing an xbrl file
+#  - takes file name as argument
+#  - returns a parsed xbrl instance
 def parseFile(filename):
     print('Parsing file : ' + filename + ' ...');
     inst: XbrlInstance = xbrlParser.parse_instance_locally(filename)
     print('Parsed successfully : ' + str(inst))
     return inst
 
+# define function for saving xbrl data from an instance to the database
+#  - takes parsed xbrl instance and filename as arguments
+#  - inserts data into the database (no return value)
 def saveToDB(inst, filename):
     # Connect to db
     print('Connecting to Oracle Database at : ' + config['db_path'])
@@ -96,6 +118,9 @@ def saveToDB(inst, filename):
     cursor.executemany("insert into xbrlfacts (fileid, name, value) values(:1, :2, :3)", facts)
     connection.commit()
 
+# define function to read facts from db
+#  - takes no arguments
+#  - returns json string of all the facts saved in the database
 def read_db():
     # Connect to db
     print('Connecting to Oracle Database at : ' + config['db_path'])
@@ -110,25 +135,36 @@ def read_db():
     facts = cursor.execute("SELECT f.id, l.filename, f.name, f.value FROM xbrlfacts f INNER JOIN xbrlfiles l ON f.fileid = l.id ORDER BY f.id").fetchall()
     return json.dumps(facts)
 
-
+# define function to return if a file name is allowed to be uploaded
+#  - takes file name as argument
+#  - returns boolean (true if allowed and false otherwise)
 def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# define function to run server
+#  - takes no arguments
+#  - runs server with defined endpoints and serves each request sent
+#    - endpoint `/`            : shows the web interface form for parsing xbrl files
+#    - endpoint `/xbrl2oracle` : receives xbrl files and config, parses and saves to db
+#    - endpoint `/facts`       : shows json string of all saved facts
 def run_server():
+    # initiate/prepare server
     app = Flask(__name__)
     app.config['SECRET_KEY'] = '-PANDA_CORNER:'
     app.config['SESSION_TYPE'] = 'filesystem'
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    # web ui route
+    # endpoint `/` : web ui route
     @app.route('/')
     def index():
         return render_template('./index.html')
-    # main endpoint
+
+    # endpoint `/xbrl2oracle` : (uses POST) receives form data, parses and saves to db
     @app.route('/xbrl2oracle', methods = ['POST'])
     def xbrl2oracle():
         files = request.files.getlist("file")
 
+        # if no entry file is sent in form data, show error message and return to form
         if ('entry_file' not in request.form or request.form['entry_file'] == ''):
             flash('Please specify entry file path')
             return redirect('/')
@@ -138,6 +174,7 @@ def run_server():
             flash('No files to upload')
             return redirect('/')
 
+        # override config variable with configuration data sent in form data if found
         if (request.form['db_path'] != ''):
             config['db_path'] = request.form['db_path']
         if (request.form['db_user'] != ''):
@@ -145,35 +182,53 @@ def run_server():
         if (request.form['db_pass'] != ''):
             config['db_pass'] = request.form['db_pass']
 
+        # debug: show current directory in command line output
         print('current working directory : '+ os.getcwd())
 
+        # loop through files to upload
         for i in range(len(files)):
+            # store the file in index `i` in the variable named `file`
             file = files[i]
             # If the user does not select a file, the browser submits an
             # empty file without a filename.
             if file.filename == '':
                 flash('No selected file')
                 return redirect('/')
+            # if file is allowed to be uploaded go on to the upload process
             if file and allowed_file(file.filename):
                 print('uploading   :  ' + file.filename)
+
+                # get the path of the file (for C:\Data\Files\Some.xml , path = 'Files')
                 path = os.path.basename(os.path.dirname(file.filename))
                 print('file path   :  ' + path)
+
+                # define the path to upload to, append the path ('Files' in our example) to the current dir and upload dir
+                # in our example if current dir is 'D:\Devel\xbrl2oracle' then local_path = 'D:\Devel\xbrl2oracle\uploads\Files'
                 local_path = os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'], path)
                 print('local path  :  ' + local_path)
+
+                # for the first file .. if the local path exists remove it before uploading to prevent conflicts
                 if i == 0 and os.path.exists(local_path):
                     print('removing directory:' + local_path)
                     shutil.rmtree(local_path)
+                # in any file .. if the local path does not exist create it before uploading
                 if not os.path.exists(local_path):
                     print('creating directory: ' + local_path)
                     os.mkdir(local_path)
+
+                # get the file name component of the uploaded file .. in our example this is 'Some.xml'
                 filename = secure_filename(os.path.basename(file.filename))
                 print('filename    :  ' + filename)
+
+                # define the full local path of the upload .. in our example : 'D:\Devel\xbrl2oracle\uploads\Files\Some.xml'
                 local_filename = os.path.join(local_path, filename)
                 print('saving file :  ' + local_filename)
+
+                # save the file locally (finish upload process)
                 file.save(local_filename)
                 print('file saved');
 
-        # now run script on the selected entry file
+        # now parse the selected entry file and save the result to the database
         entry = os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER'], request.form.get('entry_file'))
         inst = parseFile(entry)
         saveToDB(inst, entry)
@@ -188,13 +243,22 @@ def run_server():
     if __name__ == '__main__':
         app.run(debug=False, host='0.0.0.0')
 
+# This is the main procedure that happens when we run the app
+
 if len(sys.argv) < 2:
+    # if no arguments passed run in server mode and after the server runs open the browser window
     print('[Server mode]\n')
     Timer(1, lambda: webbrowser.open('http://localhost:5000/') ).start();
     run_server()
+
 elif sys.argv[1] == '-h':
+    # if we only passed -h .. display help message
     print('xbrl2oracle')
+    print('Please read the instructions at :')
+    print('https://github.com/mahmost/xbrl2oracle')
+
 else:
+    # if we passed some other argument consider it a filename (parse it, and save to db)
     print('[File mode]\n')
     inst = parseFile(sys.argv[1])
     saveToDB(inst, sys.argv[1])
