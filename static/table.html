@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="https://unpkg.com/mvp.css">
     <!-- we use vue.js framework to render json data into a table -->
     <script src="https://unpkg.com/vue@3"></script>
+    <style>
+    body {
+      overflow-x: auto;
+      font-size: 14px;
+    }
+    table td, table th {
+      text-align: left !important;
+    }
+    </style>
   </head>
   <body>
     <main id="app">
@@ -21,7 +30,7 @@
           -->
           <tr v-for="row of rows" :key="'row'+row.id">
             <td>{{ row[0]  }}</td>
-            <td>{{ row[1]  }}</td>
+            <td><small>{{ row[1]  }}</small></td>
             <td>{{ row[2]  }}</td>
             <td>{{ row[3]  }}</td>
           </tr>
