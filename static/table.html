@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>XBRL to Oracle Database</title>
+    <!-- we use mvp.css styles for quick styling -->
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css">
+    <!-- we use vue.js framework to render json data into a table -->
+    <script src="https://unpkg.com/vue@3"></script>
+  </head>
+  <body>
+    <main id="app">
+      <header><h1>XBRL to Oracle Database</h1></header>
+      <table style="display: table; width: 100%;">
+        <thead>
+          <tr><th>ID</th><th>File</th><th>Fact Name</th><th>Fact Value</th></tr>
+        </thead>
+        <tbody>
+          <!--
+            [5] - after mounting/rendering in the html part above it shows a row in the table for each fact with the data fetched from the server
+          -->
+          <tr v-for="row of rows" :key="'row'+row.id">
+            <td>{{ row[0]  }}</td>
+            <td>{{ row[1]  }}</td>
+            <td>{{ row[2]  }}</td>
+            <td>{{ row[3]  }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </main>
+
+    <script>
+      // this is the vue.js code that :
+      // [1] - initiates a vue app
+      Vue.createApp({
+        data() {
+          return {
+            rows: [],
+          };
+        },
+        mounted() {
+          // [2] - fetches facts data from our server's `/facts` endpoint (which sends json data)
+          fetch('http://localhost:5000/facts')
+            // [3] - parses the resulting facts data into the variable called rows for later usage
+            .then(response => response.json())
+            .then(data => { this.rows = data; });
+        },
+        // [4] - mounts (renders) the app into the element whose `#app` which means id="app" that is the <main> html element above
+      }).mount('#app')
+    </script>
+  </body>
+</html>

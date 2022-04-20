@@ -35,6 +35,8 @@ The server supports the following REST endpoints:
 
 - **GET** `/facts` - no parameters (returns json string of facts in db)
 
+- **GET** `/table` - no parameters (returns web ui table of facts in db)
+
 
 #### Detailed explanation of server mode
 

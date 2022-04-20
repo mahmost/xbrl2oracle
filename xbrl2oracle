@@ -234,10 +234,15 @@ def run_server():
         saveToDB(inst, entry)
         return 'Inserted'
 
-    # list facts endpoint
+    # endpoint `/facts` : list facts endpoint (raw json)
     @app.route('/facts', methods= ['GET'])
     def facts():
         return read_db()
+
+    # endpoint `/table` : list facts in web ui (table view)
+    @app.route('/table')
+    def table():
+        return app.send_static_file('./table.html')
 
     # run server
     if __name__ == '__main__':
